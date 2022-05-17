@@ -11,6 +11,9 @@ basedados.sql
 DataBase/
 Imagens/
 Output/
-Support/
+dlls_pastasystem/
+*.dll
+*.exe
+
 
 

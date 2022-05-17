@@ -19,7 +19,8 @@ DefaultDirName={sd}\ProPDV
 DefaultGroupName=PROPDV
 UninstallDisplayIcon={app}\ProPDVCliente.exe
 ShowTasksTreeLines=yes
-OutputDir=F:\Instalador_2022\Output
+OutputDir=F:\Projects\Instalador_2022\Output
+OutputBaseFilename=Instalador.ProPDV
 ;OutputDir=C:\Temp\excluir
 
 
@@ -37,7 +38,7 @@ Name: Manual; Description: Manual do Usuário; Types: Cliente Servidor Customizad
 
 [Tasks]
 Name: SqlYog; Description: Gerenciador DB; Components: Servidor; Flags: unchecked
-Name: FoxitPDF; Description: Foxit PDF Reader; Components: Cliente Servidor; Flags: unchecked
+;Name: FoxitPDF; Description: Foxit PDF Reader; Components: Cliente Servidor; Flags: unchecked
 ;Name: DigitalPersona; Description: Drivers Leitor Biométrico; Components: Cliente; Flags: unchecked
 
 
@@ -54,25 +55,23 @@ Name: C:\ProPDV\Cliente\imagens\layout; Components: Cliente
 [Files]
 ; Arquivos MySQL
 Source: Support\SQLyog-12.0.6-0.x86Community.exe; DestDir: {tmp}; Tasks: SqlYog; Flags: deleteafterinstall
-Source: Support\FoxitReader80.exe; DestDir: {tmp}; Tasks: FoxitPDF; Flags: deleteafterinstall
+;Source: Support\FoxitReader80.exe; DestDir: {tmp}; Tasks: FoxitPDF; Flags: deleteafterinstall
 ;Source: Support\drivers_digitalpersona.zip; DestDir: {#ClientFolder}; Tasks: DigitalPersona 
 
 ;Arquivos Cliente
 Source: config.clt.ini; DestDir: C:\ProPDV\Cliente; Components: Cliente
-Source: Support\dlls_cliente\*.*; DestDir:  {#ClientFolder}; Components: Cliente
+Source: Support\arquivos_cliente\*.*; DestDir:  {#ClientFolder}; Components: Cliente
 
 ;Arquivos Servidor
 ;Source: Support\mariadb-10.7.3-winx64.msi; DestDir: "{tmp}"; Components: Servidor
 Source: config.srv.ini; DestDir: {#ServerFolder}; Components: Servidor
-Source: Support\dlls_servidor\*.*; DestDir:  {#ServerFolder}; Components: Servidor
-Source: iniciar-windows.txt; DestDir: {#ServerFolder}; Components: Servidor
+Source: Support\arquivos_servidor\*.*; DestDir:  {#ServerFolder}; Components: Servidor
+
 
 
 ;Arquivos Auxiliares
 Source: Imagens\*; Excludes: "*.db"; DestDir: {#ImagesFolder}; Components: Cliente; Flags: ignoreversion recursesubdirs; 
 Source: Support\dlls_pastasystem\*.*; DestDir: C:\Windows\System; Components: Cliente Servidor
-Source: Support\mysqldump.exe; DestDir: C:\ProPDV\Servidor; Components: Servidor
-Source: Support\mysqldump_64.exe; DestDir: C:\ProPDV\Servidor; Components: Servidor
 
 
 [Languages]
@@ -102,7 +101,7 @@ Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat432
 Filename: {tmp}\SQLyog-12.0.6-0.x86Community.exe; Parameters: /S; WorkingDir: {tmp}; StatusMsg: Instalando Gerenciador SQLYog; Flags: runhidden; Tasks: SqlYog; 
 
 ; Instala o Foxit PDF
-Filename: {tmp}\FoxitReader80.exe; Parameters: "/S /VERYSILENT /NORESTART" ; WorkingDir: {tmp}; StatusMsg: Instalando Foxit PDF; Flags: runhidden; Tasks: FoxitPDF;
+;Filename: {tmp}\FoxitReader80.exe; Parameters: "/S /VERYSILENT /NORESTART" ; WorkingDir: {tmp}; StatusMsg: Instalando Foxit PDF; Flags: runhidden; Tasks: FoxitPDF;
 
 
 [Registry]
