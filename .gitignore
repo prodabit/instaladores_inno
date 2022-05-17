@@ -1,0 +1,16 @@
+#-------------------------
+# Operating Specific Junk Files
+#-------------------------
+
+# OS X
+.DS_Store
+.AppleDouble
+.LSOverride
+
+basedados.sql
+DataBase/
+Imagens/
+Output/
+Support/
+
+

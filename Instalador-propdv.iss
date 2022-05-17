@@ -38,7 +38,7 @@ Name: Manual; Description: Manual do Usuário; Types: Cliente Servidor Customizad
 [Tasks]
 Name: SqlYog; Description: Gerenciador DB; Components: Servidor; Flags: unchecked
 Name: FoxitPDF; Description: Foxit PDF Reader; Components: Cliente Servidor; Flags: unchecked
-Name: DigitalPersona; Description: Drivers Leitor Biométrico; Components: Cliente; Flags: unchecked
+;Name: DigitalPersona; Description: Drivers Leitor Biométrico; Components: Cliente; Flags: unchecked
 
 
 [Dirs]
@@ -55,7 +55,7 @@ Name: C:\ProPDV\Cliente\imagens\layout; Components: Cliente
 ; Arquivos MySQL
 Source: Support\SQLyog-12.0.6-0.x86Community.exe; DestDir: {tmp}; Tasks: SqlYog; Flags: deleteafterinstall
 Source: Support\FoxitReader80.exe; DestDir: {tmp}; Tasks: FoxitPDF; Flags: deleteafterinstall
-Source: Support\drivers_digitalpersona.zip; DestDir: {#ClientFolder}; Tasks: DigitalPersona 
+;Source: Support\drivers_digitalpersona.zip; DestDir: {#ClientFolder}; Tasks: DigitalPersona 
 
 ;Arquivos Cliente
 Source: config.clt.ini; DestDir: C:\ProPDV\Cliente; Components: Cliente
@@ -69,7 +69,7 @@ Source: iniciar-windows.txt; DestDir: {#ServerFolder}; Components: Servidor
 
 
 ;Arquivos Auxiliares
-Source: Imagens\*; DestDir: {#ImagesFolder}; Components: Cliente; Flags: ignoreversion recursesubdirs; 
+Source: Imagens\*; Excludes: "*.db"; DestDir: {#ImagesFolder}; Components: Cliente; Flags: ignoreversion recursesubdirs; 
 Source: Support\dlls_pastasystem\*.*; DestDir: C:\Windows\System; Components: Cliente Servidor
 Source: Support\mysqldump.exe; DestDir: C:\ProPDV\Servidor; Components: Servidor
 Source: Support\mysqldump_64.exe; DestDir: C:\ProPDV\Servidor; Components: Servidor
@@ -82,7 +82,8 @@ Name: brazilianportuguese; MessagesFile: compiler:Languages\BrazilianPortuguese.
 [Icons]
 Name: {commonprograms}\ProPDV\ProPDV; Filename: "{#ClientFolder}\ProPDVCliente.exe"
 Name: {userdesktop}\ProPDV; Filename: {#ClientFolder}\ProPDVCliente.exe
-Name: "%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\ServidorDataSnap"; Filename: "{#ServerFolder}\ServidorDataSnapForm.exe"
+Name: {userstartup}\ServidorDataSnap; Filename: "{#ServerFolder}\ServidorDataSnapForm.exe"
+Name: {commonstartup}\ServidorDataSnap; Filename: "{#ServerFolder}\ServidorDataSnapForm.exe"
 
 
 [Run]
@@ -93,8 +94,12 @@ Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""--max_allow
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat4321 -e ""source {app}\database.sql"""; StatusMsg: "Carregando Base de Dados Inicial"; Flags: runhidden waituntilterminated skipifdoesntexist;
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat4321 -e ""source {app}\basedados.sql"""; StatusMsg: "Carregando Base de Dados Inicial"; Flags: runhidden waituntilterminated skipifdoesntexist;
 
+
+//-- Altera o config.ino
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat4321 -e ""use propdv;"""; StatusMsg: "Atualizando Config.ini"; Flags: runhidden waituntilterminated skipifdoesntexist; BeforeInstall: AddHostNameIniFile;
+
 ;Instala o SQLYog
-Filename: {tmp}\SQLyog-12.0.6-0.x86Community.exe; Parameters: /S; WorkingDir: {tmp}; StatusMsg: Instalando Gerenciador SQLYog; Flags: runhidden; Tasks: SqlYog;
+Filename: {tmp}\SQLyog-12.0.6-0.x86Community.exe; Parameters: /S; WorkingDir: {tmp}; StatusMsg: Instalando Gerenciador SQLYog; Flags: runhidden; Tasks: SqlYog; 
 
 ; Instala o Foxit PDF
 Filename: {tmp}\FoxitReader80.exe; Parameters: "/S /VERYSILENT /NORESTART" ; WorkingDir: {tmp}; StatusMsg: Instalando Foxit PDF; Flags: runhidden; Tasks: FoxitPDF;
@@ -108,6 +113,39 @@ Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environmen
 ; Tell Windows Explorer to reload the environment
 ChangesEnvironment=yes
 
+
+[code]
+function GetComputerName(Param: string): string;
+begin
+  Result := GetComputerNameString();
+end;  
+
+procedure AddHostNameIniFile();
+var
+  i, TagPos: Integer;
+  HostName, FileName, Line: string;    
+  FileLines: TStringList;
+begin  
+  FileName := ExpandConstant('{#ClientFolder}') + '\config.clt.ini';
+
+  FileLines := TStringList.Create;
+  try
+    FileLines.LoadFromFile(FileName);
+    for i := 0 to FileLines.Count - 1 do begin
+      Line := FileLines[I];
+      TagPos := Pos('SRV0=Servidor|Servidor|8085', Line);
+      if TagPos > 0 then begin
+        HostName := GetComputerName('');
+        Line := 'SRV0=' +HostName+ '|' +HostName+ '|8085';
+        FileLines[I] := Line;
+        FileLines.SaveToFile(FileName);
+        Break;
+      end;
+    end;
+  finally
+    FileLines.Free;
+  end;
+end;   
 
 
 
