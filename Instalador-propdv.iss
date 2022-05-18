@@ -60,11 +60,11 @@ Source: Support\SQLyog-12.0.6-0.x86Community.exe; DestDir: {tmp}; Tasks: SqlYog;
 ;Source: Support\drivers_digitalpersona.zip; DestDir: {#ClientFolder}; Tasks: DigitalPersona 
 
 //-- Arquivos Cliente
-Source: config.clt.ini; DestDir: {app}\Cliente; Components: Cliente
+Source: Support\config_nao_fiscal\config.clt.ini; DestDir: {app}\Cliente; Components: Cliente
 Source: Support\arquivos_cliente\*.*; DestDir:  {app}\Cliente; Components: Cliente
 
 //-- Arquivos Servidor
-Source: config.srv.ini; DestDir: {app}\Servidor; Components: Servidor
+Source: Support\config_nao_fiscal\config.srv.ini; DestDir: {app}\Servidor; Components: Servidor
 Source: Support\arquivos_servidor\*.*; DestDir: {app}\Servidor; Components: Servidor
 
 //-- Arquivos Auxiliares
@@ -90,7 +90,6 @@ Name: {commonstartup}\ServidorDataSnap; Filename: "{app}\Servidor\ServidorDataSn
 
 [Run]
 //-- Instala e Configura o MariaDB
-;Filename: msiexec; Parameters: "/i {app}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD=suat4321 SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
 Filename: msiexec; Parameters: "/i {src}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD=suat4321 SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""flush privileges;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Configuring Database Servers; Flags: runhidden
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""create database IF NOT EXISTS propdv;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Criando DataBase ProPDV; Flags: runhidden
