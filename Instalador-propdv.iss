@@ -90,16 +90,22 @@ Name: {commonstartup}\ServidorDataSnap; Filename: "{#ServerFolder}\ServidorDataS
 
 
 [Run]
-//-- Altera o config.ini
+//-- Instala e Configura o MariaDB
 Filename: msiexec; Parameters: "/i {app}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD=suat4321 SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""flush privileges;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Configuring Database Servers; Flags: runhidden
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""create database IF NOT EXISTS propdv;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Criando DataBase ProPDV; Flags: runhidden
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""--max_allowed_packet=500000000;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Configuring Max Allowed Packet; Flags: runhidden
+
+//-- Adicionamos a linha USE ProPDV; ao arquivo da base de dados
+Filename: {cmd}; Parameters: "/c ""(echo USE ProPDV;) > {tmp}\temp.txt""";           Flags: runhidden waituntilterminated skipifdoesntexist; 
+Filename: {cmd}; Parameters: "/c ""type {code:GetDataBaseFile} >> {tmp}\temp.txt"""; Flags: runhidden waituntilterminated skipifdoesntexist; 
+Filename: {cmd}; Parameters: "/c ""move /y {tmp}\temp.txt {code:GetDataBaseFile}"""; Flags: runhidden waituntilterminated skipifdoesntexist; 
+
+
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat4321 -e ""source {code:GetDataBaseFile}"""; StatusMsg: "Carregando Base de Dados Inicial"; Flags: runhidden waituntilterminated skipifdoesntexist;
 
+//-- Aqui fazemos 2 coisas: mandamos o MariaDB reiniciar caso tenha algum problema e Chamamos a função para alterar o HostName no config.clt
 Filename: {sys}\sc.exe; Parameters: "failure MySQLPro reset=0 actions=restart/0/restart/0/restart"; Flags: runhidden waituntilterminated skipifdoesntexist; BeforeInstall: AddHostNameIniFile;
-
-
 
 ;Instala o SQLYog
 Filename: {tmp}\SQLyog-12.0.6-0.x86Community.exe; Parameters: /S; WorkingDir: {tmp}; StatusMsg: Instalando Gerenciador SQLYog; Flags: runhidden; Tasks: SqlYog; 
