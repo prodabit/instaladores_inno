@@ -6,11 +6,7 @@
 
 
 [Setup]
-#define ClientFolder "C:\ProPDV\Cliente"
-#define ServerFolder "C:\ProPDV\Servidor"
-#define ImagesFolder "C:\ProPDV\Cliente\Imagens"
 #define DBFolder     "%ProgramFiles%\MariaDB 10.7\bin"
-#define MyAppName    "ProPDV"
 
 AppName=PROPDV - Sistema de Controle
 AppVerName=PROPDV - Versão 3.8.0
@@ -22,6 +18,7 @@ ShowTasksTreeLines=yes
 OutputDir=F:\Projects\Instalador_2022\Output
 OutputBaseFilename=Instalador.ProPDV
 DisableWelcomePage=no
+DisableDirPage=no
 UserInfoPage=no
 ;Compression=lzma2
 ;WizardStyle=modern
@@ -37,7 +34,7 @@ Name: Customizada; Description: Instalação Customizada; Flags: iscustom
 [Components]
 Name: Cliente; Description: Arquivos do ProPDV.Cliente; Types: Cliente Customizada
 Name: Servidor; Description: Arquivos do ProPDV.Servidor; Types: Servidor Customizada
-Name: Manual; Description: Manual do Usuário; Types: Cliente Servidor Customizada
+Name: Manual; Description: (PDF)Primeiros passos após instalação do sistema; Types: Cliente Servidor Customizada
 
 
 [Tasks]
@@ -47,35 +44,33 @@ Name: SqlYog; Description: Gerenciador DB; Components: Servidor; Flags: unchecke
 
 
 [Dirs]
-Name: C:\ProPDV\Cliente; Components: Cliente
-Name: C:\ProPDV\Servidor; Components: Servidor
-Name: C:\ProPDV\Backup; Components: Servidor
-Name: C:\ProPDV\Cliente\imagens; Components: Cliente
-Name: C:\ProPDV\Cliente\imagens\categorias; Components: Cliente
-Name: C:\ProPDV\Cliente\imagens\produtos; Components: Cliente
-Name: C:\ProPDV\Cliente\imagens\layout; Components: Cliente
+Name: {app}\Cliente; Components: Cliente
+Name: {app}\Servidor; Components: Servidor
+Name: {app}\Backup; Components: Servidor
+Name: {app}\Cliente\imagens; Components: Cliente
+Name: {app}\Cliente\imagens\categorias; Components: Cliente
+Name: {app}\Cliente\imagens\produtos; Components: Cliente
+Name: {app}\Cliente\imagens\layout; Components: Cliente
 
 
 [Files]
-; Arquivos MySQL
+//-- Arquivos MySQL
 Source: Support\SQLyog-12.0.6-0.x86Community.exe; DestDir: {tmp}; Tasks: SqlYog; Flags: deleteafterinstall
 ;Source: Support\FoxitReader80.exe; DestDir: {tmp}; Tasks: FoxitPDF; Flags: deleteafterinstall
 ;Source: Support\drivers_digitalpersona.zip; DestDir: {#ClientFolder}; Tasks: DigitalPersona 
 
-;Arquivos Cliente
-Source: config.clt.ini; DestDir: C:\ProPDV\Cliente; Components: Cliente
-Source: Support\arquivos_cliente\*.*; DestDir:  {#ClientFolder}; Components: Cliente
+//-- Arquivos Cliente
+Source: config.clt.ini; DestDir: {app}\Cliente; Components: Cliente
+Source: Support\arquivos_cliente\*.*; DestDir:  {app}\Cliente; Components: Cliente
 
-;Arquivos Servidor
-;Source: Support\mariadb-10.7.3-winx64.msi; DestDir: "{tmp}"; Components: Servidor
-Source: config.srv.ini; DestDir: {#ServerFolder}; Components: Servidor
-Source: Support\arquivos_servidor\*.*; DestDir:  {#ServerFolder}; Components: Servidor
+//-- Arquivos Servidor
+Source: config.srv.ini; DestDir: {app}\Servidor; Components: Servidor
+Source: Support\arquivos_servidor\*.*; DestDir: {app}\Servidor; Components: Servidor
 
-
-
-;Arquivos Auxiliares
-Source: Imagens\*; Excludes: "*.db"; DestDir: {#ImagesFolder}; Components: Cliente; Flags: ignoreversion recursesubdirs; 
+//-- Arquivos Auxiliares
+Source: Imagens\*; Excludes: "*.db"; DestDir: {app}\Cliente\Imagens; Components: Cliente; Flags: ignoreversion recursesubdirs; 
 Source: Support\dlls_pastasystem\*.*; DestDir: C:\Windows\System; Components: Cliente Servidor
+Source: Support\Primeiros_Passos_Apos_Instalacao.pdf; DestDir: {app}; Components: Cliente Servidor
 
 
 [Languages]
@@ -83,15 +78,20 @@ Name: brazilianportuguese; MessagesFile: compiler:Languages\BrazilianPortuguese.
 
 
 [Icons]
-Name: {commonprograms}\ProPDV\ProPDV; Filename: "{#ClientFolder}\ProPDVCliente.exe"
-Name: {userdesktop}\ProPDV; Filename: {#ClientFolder}\ProPDVCliente.exe
-Name: {userstartup}\ServidorDataSnap; Filename: "{#ServerFolder}\ServidorDataSnapForm.exe"
-Name: {commonstartup}\ServidorDataSnap; Filename: "{#ServerFolder}\ServidorDataSnapForm.exe"
+Name: {commonprograms}\ProPDV\ProPDV; Filename: "{app}\Cliente\ProPDVCliente.exe"
+Name: {userdesktop}\ProPDV; Filename: {app}\Cliente\ProPDVCliente.exe
+
+//-- iniciar do usuário
+;Name: {userstartup}\ServidorDataSnap; Filename: "{app}\Servidor\ServidorDataSnapForm.exe"  
+
+//-- iniciar do Sistema
+Name: {commonstartup}\ServidorDataSnap; Filename: "{app}\Servidor\ServidorDataSnapForm.exe";
 
 
 [Run]
 //-- Instala e Configura o MariaDB
-Filename: msiexec; Parameters: "/i {app}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD=suat4321 SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
+;Filename: msiexec; Parameters: "/i {app}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD=suat4321 SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
+Filename: msiexec; Parameters: "/i {src}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD=suat4321 SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""flush privileges;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Configuring Database Servers; Flags: runhidden
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""create database IF NOT EXISTS propdv;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Criando DataBase ProPDV; Flags: runhidden
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""--max_allowed_packet=500000000;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Configuring Max Allowed Packet; Flags: runhidden
@@ -102,6 +102,7 @@ Filename: {cmd}; Parameters: "/c ""type {code:GetDataBaseFile} >> {tmp}\temp.txt
 Filename: {cmd}; Parameters: "/c ""move /y {tmp}\temp.txt {code:GetDataBaseFile}"""; Flags: runhidden waituntilterminated skipifdoesntexist; 
 
 
+//-- Carrega base de dados inicial
 Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat4321 -e ""source {code:GetDataBaseFile}"""; StatusMsg: "Carregando Base de Dados Inicial"; Flags: runhidden waituntilterminated skipifdoesntexist;
 
 //-- Aqui fazemos 2 coisas: mandamos o MariaDB reiniciar caso tenha algum problema e Chamamos a função para alterar o HostName no config.clt
@@ -146,7 +147,7 @@ var
   HostName, FileName, Line: string;    
   FileLines: TStringList;
 begin  
-  FileName := ExpandConstant('{#ClientFolder}') + '\config.clt.ini';
+  FileName := ExpandConstant('{app}') + '\Cliente\config.clt.ini';
 
   FileLines := TStringList.Create;
   try
