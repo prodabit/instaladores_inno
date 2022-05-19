@@ -30,10 +30,11 @@ Name: Cliente;  Description: Arquivos do ProPDV.Cliente; Types: Cliente Customiz
 Name: Servidor; Description: Arquivos do ProPDV.Servidor; Types: Servidor Customizada
 Name: DataBase; Description: Instala o SGBD MariaDB; Types: Servidor Customizada
 Name: LoadSQL;  Description: Importa Script da Base de Dados; Types: Servidor Customizada
-Name: Manual;   Description: (PDF)Primeiros passos após instalação do sistema; Types: Cliente Servidor Customizada
+Name: Manual;   Description: (PDF) Primeiros passos após instalação do sistema; Types: Cliente Servidor Customizada
+
 
 [Tasks]
-Name: SqlYog; Description: Gerenciador DB; Components: Servidor; Flags: unchecked
+Name: SqlYog; Description: SQLYog (Gerenciador DataBase); Components: Servidor; Flags: unchecked
 ;Name: FoxitPDF; Description: Foxit PDF Reader; Components: Cliente Servidor; Flags: unchecked
 ;Name: DigitalPersona; Description: Drivers Leitor Biométrico; Components: Cliente; Flags: unchecked
 
@@ -57,20 +58,28 @@ Source: Support\SQLyog-12.0.6-0.x86Community.exe; DestDir: {tmp}; Tasks: SqlYog;
 ;Source: Support\FoxitReader80.exe; DestDir: {tmp}; Tasks: FoxitPDF; Flags: deleteafterinstall
 ;Source: Support\drivers_digitalpersona.zip; DestDir: {#ClientFolder}; Tasks: DigitalPersona 
 
+
 //-- Arquivos Cliente
+Source: Support\config_fiscal\Configurador.exe; DestDir: {app}\Cliente; Components: Cliente
 Source: Support\config_fiscal\config.clt.ini; DestDir: {app}\Cliente; Components: Cliente
 Source: Support\arquivos_cliente\*.*; DestDir:  {app}\Cliente; Components: Cliente
 
+
 //-- Arquivos Servidor
+Source: Support\config_fiscal\Configurador.exe; DestDir: {app}\Servidor; Components: Servidor
 Source: Support\config_fiscal\config.srv.ini; DestDir: {app}\Servidor; Components: Servidor
 Source: Support\arquivos_servidor\*.*; DestDir: {app}\Servidor; Components: Servidor
 
+
 //-- Arquivos Fiscal
 Source: Support\Schemas\*.*; DestDir: {app}\Servidor\Arquivos\Schemas; Components: Servidor
+Source: Support\dlls_servidor_openssl\*.*; DestDir: {app}\Servidor; Components: Servidor
+
 
 //-- Arquivos Auxiliares
 Source: Imagens\*; Excludes: "*.db"; DestDir: {app}\Cliente\Imagens; Components: Cliente; Flags: ignoreversion recursesubdirs; 
 Source: Support\dlls_pastasystem\*.*; DestDir: C:\Windows\System; Components: Cliente Servidor
+Source: Support\Primeiros_Passos_Apos_Instalacao.pdf; DestDir: {app}; Components: Cliente Servidor
 
 
 [Languages]
@@ -81,6 +90,8 @@ Name: brazilianportuguese; MessagesFile: compiler:Languages\BrazilianPortuguese.
 Name: {commonprograms}\ProPDV\ProPDVFiscal; Filename: "{app}\Cliente\ClienteNFCeOS.exe"
 Name: {userdesktop}\ProPDVFiscal; Filename: {app}\Cliente\ClienteNFCeOS.exe
 Name: {commonstartup}\ServidorNFCeOS; Filename: "{app}\Servidor\ServidorNFCeOS.exe"
+//-- iniciar do usuário
+;Name: {userstartup}\ServidorDataSnap; Filename: "{app}\Servidor\ServidorDataSnapForm.exe"  
 
 
 [Run]
@@ -140,36 +151,14 @@ begin
   Result := DataBaseFile;
 end;  
 
-function GetLocalCertificado(Param: string): string;
-begin
-  Result := LocalCertificado;
-end;  
 
-function GetSerieCertificado(Param: string): string;
-begin
-  Result := Serie;
-end;  
-
-function GetSenhaCertificado(Param: string): string;
-begin
-  Result := Senha;
-end;  
-
-function GetCSC(Param: string): string;
-begin
-  Result := CSC;
-end;  
-
-function GetUF(Param: string): string;
-begin
-  Result := UF;
-end;  
-
+//-- Adiciona informações no arquivo config.clt.ini
+//---------------------------------------------------
 procedure AddInfosIniFile();
 var
   i, j, TagPos: Integer;
   HostName, FileName, Line: string;    
-  FileLines, SearchStrings: TStringList;
+  FileLines: TStringList;
 begin  
   //-- Altera informações no config.clt.ini  
   FileName := ExpandConstant('{app}') + '\Cliente\config.clt.ini';
@@ -193,7 +182,8 @@ begin
 
 
   //-- Altera informações no config.srv.ini  
-  FileName := ExpandConstant('{app}') + '\Servidor\config.srv.ini';
+  //----------------------------------------------------------------
+  (*FileName := ExpandConstant('{app}') + '\Servidor\config.srv.ini';
   FileLines := TStringList.Create;
   SearchStrings := TStringList.Create;
 
@@ -228,17 +218,19 @@ begin
   finally
     FileLines.Free;
     SearchStrings.Free;
-  end;
+  end;  *)
 end;   
 
 
+//-- Adiciona as páginas customizadas ao Wizard
+//----------------------------------------------------------
 procedure AddCustomQueryPage();
 var
   AfterID: Integer;  
 begin
   //WizardForm.LicenseAcceptedRadio.Checked := True;
   //WizardForm.PasswordEdit.Text := 'Senha Certificado';
-  WizardForm.UserInfoNameEdit.Text := 'Serie Certificado';
+  //WizardForm.UserInfoNameEdit.Text := 'Serie Certificado';
 
   AfterID := wpSelectTasks;
   //AfterID := CreateCustomPage(AfterID, 'CreateCustomPage', 'ADescription').ID;
@@ -251,17 +243,17 @@ begin
   AfterID := Page.ID;
   
   //-- Cria página para obter dados do Certificado depois da página da base de dados
-  InputQueryWizardPage := CreateInputQueryPage(AfterID, 'CERTIFICADO DIGITAL', 'Informações sobre seu certificado para emissão de NFCe', 'Entre com os dados abaixo. Se não souber, informe-os nos configurador depois da instalação');
+  (*InputQueryWizardPage := CreateInputQueryPage(AfterID, 'CERTIFICADO DIGITAL', 'Informações sobre seu certificado para emissão de NFCe', 'Entre com os dados abaixo. Se não souber, informe-os nos configurador depois da instalação');
   InputQueryWizardPage.Add('&Série:', False);
   InputQueryWizardPage.Add('&Senha:', True);
   InputQueryWizardPage.Add('&Código CSC (Obtido pelo contador na Receita Estadual):', False);
   InputQueryWizardPage.Add('&UF:', False);
-  AfterID := InputQueryWizardPage.ID; 
+  AfterID := InputQueryWizardPage.ID; *)
   
 
   // Seta valor inicial para base de dados
   Page.Values[0] := ExpandConstant('c:\propdv\basedados.sql');
-  InputQueryWizardPage.Values[3] := 'RJ';
+  //InputQueryWizardPage.Values[3] := 'RJ';
 end;
 
 
@@ -276,15 +268,13 @@ var
   ResultCode: Integer;
 begin
   case CurPageID of
-    100: 
-      DataBaseFile := Page.Values[0]; 
     wpReady: begin
       DataBaseFile := Page.Values[0]; 
-      LocalCertificado := ''; 
-      Serie := InputQueryWizardPage.Values[0];
-      Senha := InputQueryWizardPage.Values[1];
-      CSC   := InputQueryWizardPage.Values[2];      
-      UF    := InputQueryWizardPage.Values[3];      
+      //LocalCertificado := ''; 
+      //Serie := InputQueryWizardPage.Values[0];
+      //Senha := InputQueryWizardPage.Values[1];
+      //CSC   := InputQueryWizardPage.Values[2];      
+      //UF    := InputQueryWizardPage.Values[3];      
     end;
     //wpSelectProgramGroup:
       //MsgBox('NextButtonClick:' #13#13 'You selected: ''' + WizardGroupValue + '''.', mbInformation, MB_OK);    

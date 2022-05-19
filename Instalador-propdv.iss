@@ -34,11 +34,13 @@ Name: Customizada; Description: Instalação Customizada; Flags: iscustom
 [Components]
 Name: Cliente; Description: Arquivos do ProPDV.Cliente; Types: Cliente Customizada
 Name: Servidor; Description: Arquivos do ProPDV.Servidor; Types: Servidor Customizada
-Name: Manual; Description: (PDF)Primeiros passos após instalação do sistema; Types: Cliente Servidor Customizada
+Name: DataBase; Description: Instala o SGBD MariaDB; Types: Servidor Customizada
+Name: LoadSQL;  Description: Importa Script da Base de Dados; Types: Servidor Customizada
+Name: Manual; Description: (PDF) Primeiros passos após instalação do sistema; Types: Cliente Servidor Customizada
 
 
 [Tasks]
-Name: SqlYog; Description: Gerenciador DB; Components: Servidor; Flags: unchecked
+Name: SqlYog; Description: SQLYog (Gerenciador DataBase); Components: Servidor; Flags: unchecked
 ;Name: FoxitPDF; Description: Foxit PDF Reader; Components: Cliente Servidor; Flags: unchecked
 ;Name: DigitalPersona; Description: Drivers Leitor Biométrico; Components: Cliente; Flags: unchecked
 
@@ -59,13 +61,18 @@ Source: Support\SQLyog-12.0.6-0.x86Community.exe; DestDir: {tmp}; Tasks: SqlYog;
 ;Source: Support\FoxitReader80.exe; DestDir: {tmp}; Tasks: FoxitPDF; Flags: deleteafterinstall
 ;Source: Support\drivers_digitalpersona.zip; DestDir: {#ClientFolder}; Tasks: DigitalPersona 
 
+
 //-- Arquivos Cliente
+Source: Support\config_nao_fiscal\Configurador.exe; DestDir: {app}\Cliente; Components: Cliente
 Source: Support\config_nao_fiscal\config.clt.ini; DestDir: {app}\Cliente; Components: Cliente
 Source: Support\arquivos_cliente\*.*; DestDir:  {app}\Cliente; Components: Cliente
 
+
 //-- Arquivos Servidor
+Source: Support\config_nao_fiscal\Configurador.exe; DestDir: {app}\Servidor; Components: Servidor
 Source: Support\config_nao_fiscal\config.srv.ini; DestDir: {app}\Servidor; Components: Servidor
 Source: Support\arquivos_servidor\*.*; DestDir: {app}\Servidor; Components: Servidor
+
 
 //-- Arquivos Auxiliares
 Source: Imagens\*; Excludes: "*.db"; DestDir: {app}\Cliente\Imagens; Components: Cliente; Flags: ignoreversion recursesubdirs; 
@@ -80,12 +87,9 @@ Name: brazilianportuguese; MessagesFile: compiler:Languages\BrazilianPortuguese.
 [Icons]
 Name: {commonprograms}\ProPDV\ProPDV; Filename: "{app}\Cliente\ProPDVCliente.exe"
 Name: {userdesktop}\ProPDV; Filename: {app}\Cliente\ProPDVCliente.exe
-
+Name: {commonstartup}\ServidorDataSnap; Filename: "{app}\Servidor\ServidorDataSnapForm.exe";
 //-- iniciar do usuário
 ;Name: {userstartup}\ServidorDataSnap; Filename: "{app}\Servidor\ServidorDataSnapForm.exe"  
-
-//-- iniciar do Sistema
-Name: {commonstartup}\ServidorDataSnap; Filename: "{app}\Servidor\ServidorDataSnapForm.exe";
 
 
 [Run]
@@ -102,7 +106,7 @@ Filename: {cmd}; Parameters: "/c ""move /y {tmp}\temp.txt {code:GetDataBaseFile}
 
 
 //-- Carrega base de dados inicial
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat4321 -e ""source {code:GetDataBaseFile}"""; StatusMsg: "Carregando Base de Dados Inicial"; Flags: runhidden waituntilterminated skipifdoesntexist;
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat4321 -e ""source {code:GetDataBaseFile}"""; Components: Servidor and LoadSQL; StatusMsg: "Carregando Base de Dados Inicial..."; Flags: runhidden waituntilterminated skipifdoesntexist; 
 
 //-- Aqui fazemos 2 coisas: mandamos o MariaDB reiniciar caso tenha algum problema e Chamamos a função para alterar o HostName no config.clt
 Filename: {sys}\sc.exe; Parameters: "failure MySQLPro reset=0 actions=restart/0/restart/0/restart"; Flags: runhidden waituntilterminated skipifdoesntexist; BeforeInstall: AddHostNameIniFile;
@@ -193,7 +197,7 @@ var
   ResultCode: Integer;
 begin
   case CurPageID of
-    100: 
+    wpReady: 
       DataBaseFile := Page.Values[0]; 
     //wpSelectDir:
       //MsgBox('NextButtonClick:' #13#13 'You selected: ''' + WizardDirValue + '''.', mbInformation, MB_OK);
