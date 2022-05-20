@@ -94,22 +94,24 @@ Name: {commonstartup}\ServidorDataSnap; Filename: "{app}\Servidor\ServidorDataSn
 
 [Run]
 //-- Instala e Configura o MariaDB
-Filename: msiexec; Parameters: "/i {src}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD=suat4321 SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""flush privileges;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Configuring Database Servers; Flags: runhidden
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""create database IF NOT EXISTS propdv;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Criando DataBase ProPDV; Flags: runhidden
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""--max_allowed_packet=500000000;"" -uroot -psuat4321"; WorkingDir: {app}; StatusMsg: Configuring Max Allowed Packet; Flags: runhidden
+Filename: msiexec; Parameters: "/i {src}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD={code:GetDataBasePass} SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""flush privileges;"" -uroot -p{code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Configuring Database Servers; Flags: runhidden; Components: Servidor and DataBase;
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""create database IF NOT EXISTS {code:GetDataBaseName};"" -uroot -p{code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Criando DataBase {code:GetDataBaseName}; Flags: runhidden; Components: (Servidor and DataBase) LoadSQL;
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""--max_allowed_packet=500000000;"" -uroot -p{code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Configuring Max Allowed Packet; Flags: runhidden; Components: (Servidor and DataBase) LoadSQL;
+
 
 //-- Adicionamos a linha USE ProPDV; ao arquivo da base de dados
-Filename: {cmd}; Parameters: "/c ""(echo USE ProPDV;) > {tmp}\temp.txt""";           Flags: runhidden waituntilterminated skipifdoesntexist; 
-Filename: {cmd}; Parameters: "/c ""type {code:GetDataBaseFile} >> {tmp}\temp.txt"""; Flags: runhidden waituntilterminated skipifdoesntexist; 
-Filename: {cmd}; Parameters: "/c ""move /y {tmp}\temp.txt {code:GetDataBaseFile}"""; Flags: runhidden waituntilterminated skipifdoesntexist; 
+Filename: {cmd}; Parameters: "/c ""(echo USE {code:GetDataBaseName};) > {tmp}\temp.txt""";     Flags: runhidden waituntilterminated skipifdoesntexist; Components: (Servidor and DataBase) LoadSQL;
+Filename: {cmd}; Parameters: "/c ""type {code:GetDataBaseFile} >> {tmp}\temp.txt"""; Flags: runhidden waituntilterminated skipifdoesntexist; Components: (Servidor and DataBase) LoadSQL;
+Filename: {cmd}; Parameters: "/c ""move /y {tmp}\temp.txt {code:GetDataBaseFile}"""; Flags: runhidden waituntilterminated skipifdoesntexist; Components: (Servidor and DataBase) LoadSQL;
 
 
 //-- Carrega base de dados inicial
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -psuat4321 -e ""source {code:GetDataBaseFile}"""; Components: Servidor and LoadSQL; StatusMsg: "Carregando Base de Dados Inicial..."; Flags: runhidden waituntilterminated skipifdoesntexist; 
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -p{code:GetDataBasePass} -e ""source {code:GetDataBaseFile}"""; Components: (Servidor and DataBase) LoadSQL; StatusMsg: "Carregando Base de Dados Inicial..."; Flags: runhidden waituntilterminated skipifdoesntexist; 
+
 
 //-- Aqui fazemos 2 coisas: mandamos o MariaDB reiniciar caso tenha algum problema e Chamamos a função para alterar o HostName no config.clt
-Filename: {sys}\sc.exe; Parameters: "failure MySQLPro reset=0 actions=restart/0/restart/0/restart"; Flags: runhidden waituntilterminated skipifdoesntexist; BeforeInstall: AddHostNameIniFile;
+Filename: {sys}\sc.exe; Parameters: "failure MySQLPro reset=0 actions=restart/0/restart/0/restart"; Flags: runhidden waituntilterminated skipifdoesntexist; BeforeInstall: AddInfosIniFile;
 
 ;Instala o SQLYog
 Filename: {tmp}\SQLyog-12.0.6-0.x86Community.exe; Parameters: /S; WorkingDir: {tmp}; StatusMsg: Instalando Gerenciador SQLYog; Flags: runhidden; Tasks: SqlYog; 
@@ -131,8 +133,11 @@ ChangesEnvironment=yes
 [code]
 var
   Page: TInputFileWizardPage;
-  DataBaseFile: String;
-
+  DataBaseWizardPage: TInputQueryWizardPage;
+  DataBaseFile, DataBaseName, DataBasePass: String;
+  DataBasePageID: integer;
+  SQLFileImportPageID: integer;
+  
 
 function GetComputerName(Param: string): string;
 begin
@@ -144,23 +149,35 @@ begin
   Result := DataBaseFile;
 end;  
 
-procedure AddHostNameIniFile();
+function GetDataBaseName(Param: string): string;
+begin
+  Result := DataBaseName;
+end;  
+
+function GetDataBasePass(Param: string): string;
+begin
+  Result := DataBasePass;
+end;  
+
+//-- Adiciona informações no arquivo config.clt.ini
+//---------------------------------------------------
+procedure AddInfosIniFile();
 var
   i, TagPos: Integer;
   HostName, FileName, Line: string;    
   FileLines: TStringList;
 begin  
+  //-- Altera informações no config.clt.ini  
   FileName := ExpandConstant('{app}') + '\Cliente\config.clt.ini';
-
   FileLines := TStringList.Create;
   try
     FileLines.LoadFromFile(FileName);
     for i := 0 to FileLines.Count - 1 do begin
       Line := FileLines[I];
-      TagPos := Pos('SRV0=Servidor|Servidor|8085', Line);
+      TagPos := Pos('SRV0=Servidor|Servidor|9001', Line);
       if TagPos > 0 then begin
         HostName := GetComputerName('');
-        Line := 'SRV0=' +HostName+ '|' +HostName+ '|8085';
+        Line := 'SRV0=' +HostName+ '|' +HostName+ '|9001';
         FileLines[I] := Line;
         FileLines.SaveToFile(FileName);
         Break;
@@ -169,20 +186,92 @@ begin
   finally
     FileLines.Free;
   end;
+
+
+  //-- Altera informações no config.srv.ini  
+  //----------------------------------------------------------------
+  (*FileName := ExpandConstant('{app}') + '\Servidor\config.srv.ini';
+  FileLines := TStringList.Create;
+  SearchStrings := TStringList.Create;
+
+  SearchStrings.Add('Senha=123456');
+  SearchStrings.Add('Senha=' + GetSenhaCertificado(''));
+
+  SearchStrings.Add('NumSerie=serie_certificado');
+  SearchStrings.Add('NumSerie=' + getSerieCertificado(''));
+
+  SearchStrings.Add('CSC=123456789');
+  SearchStrings.Add('CSC=' + getCSC(''));
+
+  SearchStrings.Add('UF=UF');
+  SearchStrings.Add('UF=' + getUF(''));
+
+  try
+    FileLines.LoadFromFile(FileName);
+    for i := 0 to FileLines.Count - 1 do begin
+      for j := 0 to SearchStrings.Count -1 do begin
+        if((j mod 2) = 0) then begin
+          Line := FileLines[I];
+          TagPos := Pos(SearchStrings[j], Line);
+          if TagPos > 0 then begin          
+            Line := SearchStrings[j + 1]
+            FileLines[I] := Line;
+            FileLines.SaveToFile(FileName);
+            Break;
+          end;
+        end;
+      end;
+    end;
+  finally
+    FileLines.Free;
+    SearchStrings.Free;
+  end;  *)
 end;   
 
 
+//-- Adiciona as páginas customizadas ao Wizard
+//----------------------------------------------------------
 procedure AddCustomQueryPage();
+var
+  AfterID: Integer;  
 begin
-  Page := CreateInputFilePage(wpWelcome, 'Selecione o arquivo da Base de Dados a ser carregado', 'Deixe em branco se não quer carregar base de dados.', '');
+  //WizardForm.LicenseAcceptedRadio.Checked := True;
+  //WizardForm.PasswordEdit.Text := 'Senha Certificado';
+  //WizardForm.UserInfoNameEdit.Text := 'Serie Certificado';
 
-  // Add item
-  Page.Add('&Localização da base de dados:',                   // caption
+  AfterID := wpSelectTasks;
+  //AfterID := CreateCustomPage(AfterID, 'CreateCustomPage', 'ADescription').ID;
+
+  //-- Cria página para obter senha do database
+  DataBaseWizardPage := CreateInputQueryPage(AfterID, 'Senha DB', 'Informações sobre sua base de dados', 'Entre com os dados abaixo.');
+  DataBaseWizardPage.Add('&Nome Base de Dados:', False);
+  DataBaseWizardPage.Add('&Senha DB:', True);  
+  DataBasePageID := DataBaseWizardPage.ID;
+  AfterID := DataBaseWizardPage.ID; 
+
+  //-- Cria página para entrada da base de dados depois do Wizard Padrão
+  Page := CreateInputFilePage(AfterID, 'BASE DE DADOS', 'Selecione o arquivo da Base de Dados a ser carregado', 'Deixe em branco se não for carregar base de dados neste momento.');
+  Page.Add('&Arquivo da base de dados SQL:',                   // caption
            'Arquivos SQL|*.sql|Arquivos Bak|*.bak|Todos|*.*',  // filters
            '.sql');                                            // default extension
+  SQLFileImportPageID := Page.ID;
+  AfterID := Page.ID; 
+  
 
-  // Set initial value (optional)
+
+  //-- Cria página para obter dados do Certificado depois da página da base de dados
+  (*InputQueryWizardPage := CreateInputQueryPage(AfterID, 'CERTIFICADO DIGITAL', 'Informações sobre seu certificado para emissão de NFCe', 'Entre com os dados abaixo. Se não souber, informe-os nos configurador depois da instalação');
+  InputQueryWizardPage.Add('&Série:', False);
+  InputQueryWizardPage.Add('&Senha:', True);
+  InputQueryWizardPage.Add('&Código CSC (Obtido pelo contador na Receita Estadual):', False);
+  InputQueryWizardPage.Add('&UF:', False);
+  AfterID := InputQueryWizardPage.ID; *)
+  
+
+  // Seta valor inicial para base de dados
   Page.Values[0] := ExpandConstant('c:\propdv\basedados.sql');
+  DataBaseWizardPage.Values[0] := 'ProPDV';
+  DataBaseWizardPage.Values[1] := '';
 end;
 
 
@@ -193,14 +282,18 @@ end;
 
 
 function NextButtonClick(CurPageID: Integer): Boolean;
-var
-  ResultCode: Integer;
 begin
   case CurPageID of
-    wpReady: 
+    wpReady: begin
       DataBaseFile := Page.Values[0]; 
-    //wpSelectDir:
-      //MsgBox('NextButtonClick:' #13#13 'You selected: ''' + WizardDirValue + '''.', mbInformation, MB_OK);
+      DataBaseName := DataBaseWizardPage.Values[0];
+      DataBasePass := DataBaseWizardPage.Values[1];
+      //LocalCertificado := ''; 
+      //Serie := InputQueryWizardPage.Values[0];
+      //Senha := InputQueryWizardPage.Values[1];
+      //CSC   := InputQueryWizardPage.Values[2];      
+      //UF    := InputQueryWizardPage.Values[3];      
+    end;
     //wpSelectProgramGroup:
       //MsgBox('NextButtonClick:' #13#13 'You selected: ''' + WizardGroupValue + '''.', mbInformation, MB_OK);    
   end;
@@ -209,8 +302,16 @@ begin
 end;
 
 
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  { initialize result to not skip any page (not necessary, but safer) }
+  Result := False;
+  { if the page that is asked to be skipped is your custom page, then... }
+  if PageID = DataBasePageID then
+    { if the component is not selected, skip the page }
+    Result := not WizardIsComponentSelected('DataBase');
 
-
-
-
-
+  if PageID = SQLFileImportPageID then
+    { if the component is not selected, skip the page }
+    Result := not WizardIsComponentSelected('LoadSQL');    
+end;

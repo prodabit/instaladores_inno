@@ -96,10 +96,10 @@ Name: {commonstartup}\ServidorNFCeOS; Filename: "{app}\Servidor\ServidorNFCeOS.e
 
 [Run]
 //-- Instala e Configura o MariaDB
-Filename: msiexec; Parameters: "/i {src}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD=suat4321 SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""flush privileges;"" -uroot -p {code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Configuring Database Servers...; Flags: runhidden; Components: Servidor and DataBase;
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""create database IF NOT EXISTS {code:GetDataBaseName};"" -uroot -p {code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Criando DataBase {code:GetDataBaseName}...; Flags: runhidden; Components: (Servidor and DataBase) LoadSQL;
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""--max_allowed_packet=500000000;"" -uroot -p {code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Configuring Max Allowed Packet...; Flags: runhidden; Components: (Servidor and DataBase) LoadSQL;
+Filename: msiexec; Parameters: "/i {src}\mariadb-10.7.3-winx64.msi PORT=3308 PASSWORD={code:GetDataBasePass} SERVICENAME=MySQLPRO ADDLOCAL=ALL REMOVE=DEVEL,HeidiSQL /qn"; WorkingDir:{app}; StatusMsg: Aguarde... Instalando MariaDB-10.7.3;  Flags: runhidden
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""flush privileges;"" -uroot -p{code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Configuring Database Servers...; Flags: runhidden; Components: Servidor and DataBase;
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""create database IF NOT EXISTS {code:GetDataBaseName};"" -uroot -p{code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Criando DataBase {code:GetDataBaseName}...; Flags: runhidden; Components: (Servidor and DataBase) LoadSQL;
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-e ""--max_allowed_packet=500000000;"" -uroot -p{code:GetDataBasePass}"; WorkingDir: {app}; StatusMsg: Configuring Max Allowed Packet...; Flags: runhidden; Components: (Servidor and DataBase) LoadSQL;
 
 //-- Adicionamos a linha USE ProPDVFiscal; ao arquivo da base de dados
 Filename: {cmd}; Parameters: "/c ""(echo USE {code:GetDataBaseName};) > {tmp}\temp.txt""";     Flags: runhidden waituntilterminated skipifdoesntexist; Components: (Servidor and DataBase) LoadSQL;
@@ -108,7 +108,7 @@ Filename: {cmd}; Parameters: "/c ""move /y {tmp}\temp.txt {code:GetDataBaseFile}
 
 
 //-- Carrega base de dados inicial
-Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -p {code:GetDataBasePass} -e ""source {code:GetDataBaseFile}"""; Components: (Servidor and DataBase) LoadSQL; StatusMsg: "Carregando Base de Dados Inicial..."; Flags: runhidden waituntilterminated skipifdoesntexist; 
+Filename: {commonpf64}\MariaDB 10.7\bin\mysql.exe; Parameters: "-uroot -p{code:GetDataBasePass} -e ""source {code:GetDataBaseFile}"""; Components: (Servidor and DataBase) LoadSQL; StatusMsg: "Carregando Base de Dados Inicial..."; Flags: runhidden waituntilterminated skipifdoesntexist; 
 
 //-- Aqui fazemos 2 coisas: mandamos o MariaDB reiniciar caso tenha algum problema e Chamamos a função para alterar os dados no config.ini
 Filename: {sys}\sc.exe; Parameters: "failure MySQLPro reset=0 actions=restart/0/restart/0/restart"; Flags: runhidden waituntilterminated skipifdoesntexist; BeforeInstall: AddInfosIniFile;
@@ -309,11 +309,11 @@ begin
   { if the page that is asked to be skipped is your custom page, then... }
   if PageID = DataBasePageID then
     { if the component is not selected, skip the page }
-    Result := not IsComponentSelected('DataBase');
+    Result := (not WizardIsComponentSelected('DataBase') and not WizardIsComponentSelected('LoadSQL'));
 
   if PageID = SQLFileImportPageID then
     { if the component is not selected, skip the page }
-    Result := not IsComponentSelected('LoadSQL');    
+    Result := not WizardIsComponentSelected('LoadSQL');    
 end;
 
 
